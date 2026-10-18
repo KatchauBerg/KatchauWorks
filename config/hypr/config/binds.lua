@@ -1,3 +1,6 @@
+-- Atalhos no padrão do HyDE (https://github.com/HyDE-Project/HyDE), adaptados
+-- para Noctalia (no lugar de rofi/waybar/swaync), kwall e ktheme.
+
 local mainMod = "SUPER"
 local noctCall = "noctalia msg "
 local launchPrefix = "uwsm app -- " -- if you are not using UWSM, make this empty (e.g. "")
@@ -13,13 +16,26 @@ end
 ---- WINDOW MANAGEMENT ----
 ---------------------------
 
--- Window manipulation
+hl.bind(mainMod .. " + Q",                 hl.dsp.window.close())
+hl.bind("ALT + F4",                        hl.dsp.window.close())
+hl.bind(mainMod .. " + Delete",            hl.dsp.exit())
+hl.bind(mainMod .. " + W",                 hl.dsp.window.float({ action = "toggle" }))
+hl.bind(mainMod .. " + G",                 hl.dsp.group.toggle())
+hl.bind("SHIFT + F11",                     hl.dsp.window.fullscreen())
+hl.bind(mainMod .. " + L",                 hl.dsp.exec_cmd(noctCall .. "session lock"))
+hl.bind(mainMod .. " + SHIFT + F",         hl.dsp.window.pin())
+hl.bind("CONTROL + ALT + Delete",          hl.dsp.exec_cmd(noctCall .. "panel-toggle session"))
+hl.bind(mainMod .. " + J",                 hl.dsp.layout("togglesplit"))
+
+-- Extras (não conflitam com o HyDE)
 hl.bind(mainMod .. " + Escape",      hl.dsp.exec_cmd("hyprctl kill"))
-hl.bind(mainMod .. " + Q",           hl.dsp.window.close())
 hl.bind(mainMod .. " + ALT + Space", hl.dsp.window.float({ action = "toggle" }))
-hl.bind(mainMod .. " + D",           hl.dsp.window.fullscreen({ mode = 1 }))
 hl.bind(mainMod .. " + F",           hl.dsp.window.fullscreen())
-hl.bind(mainMod .. " + J",           hl.dsp.layout("togglesplit"))
+hl.bind(mainMod .. " + D",           hl.dsp.window.fullscreen({ mode = 1 }))
+
+-- Group navigation
+hl.bind(mainMod .. " + CONTROL + H", hl.dsp.group.prev())
+hl.bind(mainMod .. " + CONTROL + L", hl.dsp.group.next())
 
 -- Change focus
 hl.bind(mainMod .. " + Left",  hl.dsp.focus({ direction = "left" }))
@@ -27,30 +43,22 @@ hl.bind(mainMod .. " + Right", hl.dsp.focus({ direction = "right" }))
 hl.bind(mainMod .. " + Up",    hl.dsp.focus({ direction = "up" }))
 hl.bind(mainMod .. " + Down",  hl.dsp.focus({ direction = "down" }))
 hl.bind("ALT + Tab",           hl.dsp.window.cycle_next())
-hl.bind(mainMod .. " + Tab",   hl.dsp.exec_cmd(noctCall .. "window-switcher"))
 
--- Move active window around workspaces & monitors
-hl.bind(mainMod .. " + SHIFT + Up",                   hl.dsp.window.move({ direction = "u" }))
-hl.bind(mainMod .. " + SHIFT + Right",                hl.dsp.window.move({ direction = "r" }))
-hl.bind(mainMod .. " + SHIFT + Left",                 hl.dsp.window.move({ direction = "l" }))
-hl.bind(mainMod .. " + SHIFT + Down",                 hl.dsp.window.move({ direction = "d" }))
-hl.bind(mainMod .. " + SHIFT + " .. digitCode(1),     hl.dsp.window.move({ monitor = MONITOR1 }))
-hl.bind(mainMod .. " + SHIFT + " .. digitCode(2),     hl.dsp.window.move({ monitor = MONITOR2 }))
-hl.bind(mainMod .. " + SHIFT + " .. digitCode(3),     hl.dsp.window.move({ monitor = MONITOR3 }))
-hl.bind(mainMod .. " + SHIFT + mouse_up",             hl.dsp.window.move({ monitor   = "-1" }))
-hl.bind(mainMod .. " + SHIFT + mouse_down",           hl.dsp.window.move({ monitor   = "+1" }))
-hl.bind(mainMod .. " + CONTROL + SHIFT + Right",      hl.dsp.window.move({ workspace = "m+1" }))
-hl.bind(mainMod .. " + CONTROL + SHIFT + Left",       hl.dsp.window.move({ workspace = "m-1" }))
-hl.bind(mainMod .. " + CONTROL + SHIFT + mouse_up",   hl.dsp.window.move({ workspace = "m-1" }))
-hl.bind(mainMod .. " + CONTROL + SHIFT + mouse_down", hl.dsp.window.move({ workspace = "m+1" }))
-for i = 1, NUM_WPM do
-    local key = i % 10
-    hl.bind(mainMod .. " + SHIFT + CONTROL + " .. digitCode(key), hl.dsp.window.move({ workspace = "m~" .. i }))
-end
-for i = 1, NUM_WPM do
-    local key = i % 10
-    hl.bind(mainMod .. " + SHIFT + ALT + " .. digitCode(key), hl.dsp.window.move({ workspace = "m~" .. i, follow = false }))
-end
+-- Resize windows
+hl.bind(mainMod .. " + SHIFT + Right", hl.dsp.window.resize({ x = 30,  y = 0,   relative = true }), { repeating = true })
+hl.bind(mainMod .. " + SHIFT + Left",  hl.dsp.window.resize({ x = -30, y = 0,   relative = true }), { repeating = true })
+hl.bind(mainMod .. " + SHIFT + Up",    hl.dsp.window.resize({ x = 0,   y = -30, relative = true }), { repeating = true })
+hl.bind(mainMod .. " + SHIFT + Down",  hl.dsp.window.resize({ x = 0,   y = 30,  relative = true }), { repeating = true })
+
+-- Move windows
+hl.bind(mainMod .. " + SHIFT + CONTROL + Left",  hl.dsp.window.move({ direction = "l" }))
+hl.bind(mainMod .. " + SHIFT + CONTROL + Right", hl.dsp.window.move({ direction = "r" }))
+hl.bind(mainMod .. " + SHIFT + CONTROL + Up",    hl.dsp.window.move({ direction = "u" }))
+hl.bind(mainMod .. " + SHIFT + CONTROL + Down",  hl.dsp.window.move({ direction = "d" }))
+
+-- Move window to another monitor with the mouse wheel
+hl.bind(mainMod .. " + SHIFT + mouse_up",   hl.dsp.window.move({ monitor = "-1" }))
+hl.bind(mainMod .. " + SHIFT + mouse_down", hl.dsp.window.move({ monitor = "+1" }))
 
 -- Move & Resize with mouse
 hl.bind(mainMod .. " + mouse:272", hl.dsp.window.drag())
@@ -79,25 +87,36 @@ hl.bind(mainMod .. " + code:86", function() zoomfunction(0.3) end, { repeating =
 ---- LAUNCHER ----
 ------------------
 
+hl.bind(mainMod .. " + T",          hl.dsp.exec_cmd(launchPrefix .. TERMINAL))
 hl.bind(mainMod .. " + Return",     hl.dsp.exec_cmd(launchPrefix .. TERMINAL))
 hl.bind(mainMod .. " + E",          hl.dsp.exec_cmd(launchPrefix .. FILE_MANAGER))
-hl.bind(mainMod .. " + T",          hl.dsp.exec_cmd(launchPrefix .. EDITOR))
-hl.bind(mainMod .. " + C",          hl.dsp.exec_cmd(launchPrefix .. CALCULATOR))
+hl.bind(mainMod .. " + C",          hl.dsp.exec_cmd(launchPrefix .. EDITOR))
+hl.bind(mainMod .. " + B",          hl.dsp.exec_cmd(launchPrefix .. BROWSER))
 hl.bind("XF86Calculator",           hl.dsp.exec_cmd(launchPrefix .. CALCULATOR))
-hl.bind(mainMod .. " + W",          hl.dsp.exec_cmd(launchPrefix .. BROWSER))
 hl.bind("CONTROL + SHIFT + Escape", hl.dsp.exec_cmd(launchPrefix .. TERMINAL .. " -e btop"))
-hl.bind(mainMod .. " + Z",          hl.dsp.exec_cmd(noctCall .. "settings-toggle"))
-hl.bind(mainMod .. " + X",          hl.dsp.exec_cmd(noctCall .. "panel-toggle control-center"))
+
+-- Rofi menus do HyDE -> painéis do Noctalia
+hl.bind(mainMod .. " + A",          hl.dsp.exec_cmd(noctCall .. "panel-toggle launcher"))
 hl.bind(mainMod .. " + Space",      hl.dsp.exec_cmd(noctCall .. "panel-toggle launcher"))
+hl.bind(mainMod .. " + Tab",        hl.dsp.exec_cmd(noctCall .. "window-switcher"))
+hl.bind(mainMod .. " + comma",      hl.dsp.exec_cmd(noctCall .. "panel-toggle launcher /emo"))
 hl.bind(mainMod .. " + period",     hl.dsp.exec_cmd(noctCall .. "panel-toggle launcher /emo"))
-hl.bind(mainMod .. " + L",          hl.dsp.exec_cmd(noctCall .. "session lock"))
-hl.bind(mainMod .. " + ALT + C",    hl.dsp.exec_cmd(noctCall .. "panel-toggle session"))
+hl.bind(mainMod .. " + V",          hl.dsp.exec_cmd(noctCall .. "panel-toggle clipboard"))
+hl.bind(mainMod .. " + SHIFT + V",  hl.dsp.exec_cmd(noctCall .. "panel-toggle clipboard"))
+
+-- Noctalia (sem equivalente no HyDE)
+hl.bind(mainMod .. " + N",          hl.dsp.exec_cmd(noctCall .. "panel-toggle control-center notifications"))
+hl.bind(mainMod .. " + X",          hl.dsp.exec_cmd(noctCall .. "panel-toggle control-center"))
+hl.bind(mainMod .. " + Z",          hl.dsp.exec_cmd(noctCall .. "settings-toggle"))
 
 ---------------------------
 ---- HARDWARE CONTROLS ----
 ---------------------------
 
 -- Audio
+hl.bind("F10",                  hl.dsp.exec_cmd(noctCall .. "volume-mute"), { locked = true })
+hl.bind("F11",                  hl.dsp.exec_cmd(noctCall .. "volume-down"), { locked = true, repeating = true })
+hl.bind("F12",                  hl.dsp.exec_cmd(noctCall .. "volume-up"),   { locked = true, repeating = true })
 hl.bind("XF86AudioRaiseVolume", hl.dsp.exec_cmd(noctCall .. "volume-up"),   { locked = true, repeating = true })
 hl.bind("XF86AudioLowerVolume", hl.dsp.exec_cmd(noctCall .. "volume-down"), { locked = true, repeating = true })
 hl.bind("XF86AudioMute",        hl.dsp.exec_cmd(noctCall .. "volume-mute"), { locked = true })
@@ -117,68 +136,55 @@ hl.bind("XF86MonBrightnessDown", hl.dsp.exec_cmd(noctCall .. "brightness-down"),
 ---- UTILITIES ----
 -------------------
 
+-- Keyboard layout
+hl.bind(mainMod .. " + K", hl.dsp.exec_cmd("hyprctl switchxkblayout all next"))
+
 -- Screen Capture
-hl.bind(mainMod .. " + P",     hl.dsp.exec_cmd("hyprpicker -a -n"))
-hl.bind("Print",               hl.dsp.exec_cmd(noctCall .. "screenshot-region"))
-hl.bind(mainMod .. " + Print", hl.dsp.exec_cmd(noctCall .. "screenshot-fullscreen"))
-hl.bind("CONTROL + SHIFT + S", hl.dsp.exec_cmd(noctCall .. "screenshot-region"))
+hl.bind(mainMod .. " + P",             hl.dsp.exec_cmd(noctCall .. "screenshot-region"))
+hl.bind(mainMod .. " + CONTROL + P",   hl.dsp.exec_cmd(noctCall .. "screenshot-region"))
+hl.bind(mainMod .. " + ALT + P",       hl.dsp.exec_cmd(noctCall .. "screenshot-fullscreen"))
+hl.bind("Print",                       hl.dsp.exec_cmd(noctCall .. "screenshot-fullscreen"))
+hl.bind(mainMod .. " + SHIFT + P",     hl.dsp.exec_cmd("hyprpicker -a -n"))
 
--- Theming and Wallpaper
-hl.bind(mainMod .. " + SHIFT + W", hl.dsp.exec_cmd(noctCall .. "panel-toggle wallpaper"))
+-- Wallpapers (kwall) e temas (ktheme)
+local kwall = os.getenv("HOME") .. "/dotfiles/scripts/kwall "
+local ktheme = os.getenv("HOME") .. "/dotfiles/scripts/ktheme "
 
--- Clipboard
-hl.bind(mainMod .. " + V", hl.dsp.exec_cmd(noctCall .. "panel-toggle clipboard"))
-
--- Notifications
-hl.bind(mainMod .. " + A", hl.dsp.exec_cmd(noctCall .. "panel-toggle control-center notifications"))
+hl.bind(mainMod .. " + SHIFT + W",           hl.dsp.exec_cmd(kwall .. "pick"))            -- seletor de wallpaper
+hl.bind(mainMod .. " + ALT + Right",         hl.dsp.exec_cmd(kwall .. "next"))            -- próximo wallpaper
+hl.bind(mainMod .. " + ALT + Left",          hl.dsp.exec_cmd(kwall .. "random"))          -- (kwall não tem "anterior")
+hl.bind(mainMod .. " + CONTROL + W",         hl.dsp.exec_cmd(kwall .. "random"))
+hl.bind(mainMod .. " + SHIFT + ALT + W",     hl.dsp.exec_cmd(kwall .. "random animated"))
+hl.bind(mainMod .. " + SHIFT + CONTROL + W", hl.dsp.exec_cmd(kwall .. "stop"))            -- parar animação
+hl.bind(mainMod .. " + ALT + W",             hl.dsp.exec_cmd(noctCall .. "panel-toggle wallpaper"))
+hl.bind(mainMod .. " + SHIFT + T",           hl.dsp.exec_cmd(ktheme .. "pick"))           -- seletor de temas
+hl.bind(mainMod .. " + ALT + T",             hl.dsp.exec_cmd(ktheme .. "next"))           -- próximo tema
 
 -------------------------------
 ---- WORKSPACES & MONITORS ----
 -------------------------------
 
--- Focus on monitors
-hl.bind(mainMod .. " + " .. digitCode(1), hl.dsp.focus({ monitor = MONITOR1 }))
-hl.bind(mainMod .. " + " .. digitCode(2), hl.dsp.focus({ monitor = MONITOR2 }))
-hl.bind(mainMod .. " + " .. digitCode(3), hl.dsp.focus({ monitor = MONITOR3 }))
-
--- Focus on workspace number
--- Absolute
-for i = 1, NUM_WPM do
-    local key = i % 10
-    hl.bind(mainMod .. " + ALT + " .. digitCode(key), hl.dsp.focus({ workspace = i }))
-end
--- Relative
-for i = 1, NUM_WPM do
-    local key = i % 10
-    hl.bind(mainMod .. " + CONTROL + " .. digitCode(key), hl.dsp.focus({ workspace = "m~" .. i }))
+for i = 1, 10 do
+    local key = digitCode(i % 10)
+    hl.bind(mainMod .. " + " .. key,           hl.dsp.focus({ workspace = i }))
+    hl.bind(mainMod .. " + SHIFT + " .. key,   hl.dsp.window.move({ workspace = i }))
+    hl.bind(mainMod .. " + ALT + " .. key,     hl.dsp.window.move({ workspace = i, follow = false }))
 end
 
--- Move to adjacent workspaces and next empty on a given monitor
-hl.bind(mainMod .. " + CONTROL + Right",       hl.dsp.focus({ workspace = "m+1" }))
-hl.bind(mainMod .. " + CONTROL + Left",        hl.dsp.focus({ workspace = "m-1" }))
-hl.bind(mainMod .. " + CONTROL + Down",        hl.dsp.focus({ workspace = "emptym" }))
+-- Relative workspaces and first empty
+hl.bind(mainMod .. " + CONTROL + Right", hl.dsp.focus({ workspace = "r+1" }))
+hl.bind(mainMod .. " + CONTROL + Left",  hl.dsp.focus({ workspace = "r-1" }))
+hl.bind(mainMod .. " + CONTROL + Down",  hl.dsp.focus({ workspace = "empty" }))
 
--- Scroll through existing workspaces & monitors
-hl.bind(mainMod .. " + mouse_down",           hl.dsp.focus({ workspace = "m-1" }))
-hl.bind(mainMod .. " + mouse_up",             hl.dsp.focus({ workspace = "m+1" }))
-hl.bind(mainMod .. " + CONTROL + mouse_up",   hl.dsp.focus({ workspace = "m-1" }))
-hl.bind(mainMod .. " + CONTROL + mouse_down", hl.dsp.focus({ workspace = "m+1" }))
+-- Move window to relative workspace
+hl.bind(mainMod .. " + CONTROL + ALT + Right", hl.dsp.window.move({ workspace = "r+1" }))
+hl.bind(mainMod .. " + CONTROL + ALT + Left",  hl.dsp.window.move({ workspace = "r-1" }))
+
+-- Scroll through existing workspaces
+hl.bind(mainMod .. " + mouse_down", hl.dsp.focus({ workspace = "e+1" }))
+hl.bind(mainMod .. " + mouse_up",   hl.dsp.focus({ workspace = "e-1" }))
 
 -- Special workspace (scratchpad)
 hl.bind(mainMod .. " + SHIFT + S", hl.dsp.window.move({ workspace = "special" }))
+hl.bind(mainMod .. " + ALT + S",   hl.dsp.window.move({ workspace = "special", follow = false }))
 hl.bind(mainMod .. " + S",         hl.dsp.workspace.toggle_special())
-
--------------------------------
----- KUROMI WALLPAPERS (kwall) ----
--------------------------------
-local kwall = os.getenv("HOME") .. "/dotfiles/scripts/kwall "
-
-hl.bind(mainMod .. " + ALT + W",     hl.dsp.exec_cmd(kwall .. "pick"))            -- escolher (estático ou animado)
-hl.bind(mainMod .. " + CONTROL + W", hl.dsp.exec_cmd(kwall .. "random"))          -- aleatório
-hl.bind(mainMod .. " + SHIFT + ALT + W", hl.dsp.exec_cmd(kwall .. "random animated"))
-hl.bind(mainMod .. " + SHIFT + CONTROL + W", hl.dsp.exec_cmd(kwall .. "stop"))    -- parar animação
-
--- Temas (ktheme): Kuromi, Guts…
-local ktheme = os.getenv("HOME") .. "/dotfiles/scripts/ktheme "
-hl.bind(mainMod .. " + SHIFT + T", hl.dsp.exec_cmd(ktheme .. "pick"))   -- seletor de temas
-hl.bind(mainMod .. " + ALT + T",   hl.dsp.exec_cmd(ktheme .. "next"))   -- próximo tema
