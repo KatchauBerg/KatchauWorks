@@ -1,0 +1,16 @@
+/* Tema Guts ⚔ — cores e título do seletor (importado por config/rofi/wallselect.rasi) */
+* {
+    font:        "MesloLGS Nerd Font Mono Bold 10";
+    main-bg:     #0a0909eb;
+    main-fg:     #e4e0dcff;
+    main-br:     #c8102eff;
+    select-bg:   #c8102eff;
+    select-fg:   #0a0909ff;
+    alt-bg:      #1c1a1acc;
+    accent:      #8e9196ff;
+    radius:      0.3em;
+    icon-radius: 0.15em;
+}
+textbox-title {
+    content:     "  󰞇  STRUGGLER  󰞇  ";
+}

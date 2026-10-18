@@ -1,0 +1,16 @@
+/* Tema Kuromi ♥ — cores e título do seletor (importado por config/rofi/wallselect.rasi) */
+* {
+    font:        "MesloLGM Nerd Font 10";
+    main-bg:     #141019e6;
+    main-fg:     #f3eaf7ff;
+    main-br:     #ff8fc8ff;
+    select-bg:   #ff8fc8ff;
+    select-fg:   #141019ff;
+    alt-bg:      #241b2fcc;
+    accent:      #b794f6ff;
+    radius:      1.6em;
+    icon-radius: 1.2em;
+}
+textbox-title {
+    content:     "  ♥  kuromi wallpapers  ♥  ";
+}

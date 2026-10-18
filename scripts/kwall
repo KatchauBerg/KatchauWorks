@@ -1,0 +1,212 @@
+#!/usr/bin/env bash
+# kwall — gerenciador de wallpapers (estáticos via Noctalia, animados via mpvpaper)
+# Trabalha sempre com o tema ativo (themes/current): só lista os wallpapers dele.
+#
+#   kwall set <arquivo>         define wallpaper (png/jpg/webp → estático; mp4/webm/mkv/gif → animado)
+#   kwall random [static|animated|all]
+#   kwall pick                  seletor visual estilo HyDE (rofi), com miniaturas
+#   kwall thumbs                pré-gera as miniaturas do seletor
+#   kwall next                  próximo da lista
+#   kwall add <arquivo|url>     copia/baixa para ~/Imagens/Wallpapers/<Tema> e aplica
+#   kwall stop                  para a animação e volta ao estático
+#   kwall pause                 pausa/retoma a animação
+#   kwall restore               reaplica o último, ou o padrão (usado no autostart)
+#   kwall default               aplica o padrão do tema (THEME_WALLPAPER em theme.conf)
+#   kwall fetch [all]           baixa os wallpapers de themes/<tema>/downloads.txt
+#   kwall list | current
+set -euo pipefail
+
+DOTFILES="${DOTFILES:-$HOME/dotfiles}"
+WALL_ROOT="${KWALL_USER_DIR:-$(xdg-user-dir PICTURES 2>/dev/null || echo "$HOME/Imagens")/Wallpapers}"
+THEME_DIR="$(readlink -f "$DOTFILES/themes/current")"
+THEME_NAME="$(basename "$THEME_DIR")"; THEME_WALLPAPER=""; THEME_ICON="♥"; THEME_ACCENT="#ffffff"
+# shellcheck source=/dev/null
+[[ -f "$THEME_DIR/theme.conf" ]] && source "$THEME_DIR/theme.conf"
+USER_DIR="$WALL_ROOT/$THEME_NAME"                # wallpapers pessoais/baixados do tema
+DIRS=("$THEME_DIR/wallpapers" "$USER_DIR")
+STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/kwall"
+STATE="$STATE_DIR/$THEME_NAME.current"           # último wallpaper usado em cada tema
+MPV_OPTS="no-audio loop-file=inf panscan=1.0 hwdec=auto-safe"
+
+mkdir -p "$STATE_DIR" "$USER_DIR"
+
+is_video() { [[ "${1,,}" =~ \.(mp4|webm|mkv|mov|gif)$ ]]; }
+is_image() { [[ "${1,,}" =~ \.(png|jpe?g|webp|bmp)$ ]]; }
+
+list_all() {
+    local kind="${1:-all}"
+    for d in "${DIRS[@]}"; do
+        [[ -d "$d" ]] || continue
+        find -L "$d" -maxdepth 2 -type f ! -name '*.poster.png' 2>/dev/null
+    done | sort -u | while read -r f; do
+        case "$kind" in
+            static)   is_image "$f" && echo "$f" ;;
+            animated) is_video "$f" && echo "$f" ;;
+            *)        { is_image "$f" || is_video "$f"; } && echo "$f" ;;
+        esac
+    done
+}
+
+THUMBS="${XDG_CACHE_HOME:-$HOME/.cache}/kwall/thumbs"
+ROFI_THEME="$DOTFILES/config/rofi/wallselect.rasi"
+
+# miniatura quadrada 500x500 (como o .sqre do HyDE); vídeos ganham um selo ▶
+thumb_for() {
+    local f="$1" t
+    t="$THUMBS/$(printf '%s' "$f$THEME_ACCENT" | md5sum | cut -c1-16).png"
+    [[ -s "$t" && "$t" -nt "$f" ]] && { echo "$t"; return; }
+    mkdir -p "$THUMBS"
+    if is_video "$f"; then
+        local frame="$THUMBS/.frame.png"
+        ffmpeg -loglevel error -y -ss 2 -i "$f" -frames:v 1 "$frame" 2>/dev/null ||
+            ffmpeg -loglevel error -y -i "$f" -frames:v 1 "$frame"
+        magick "$frame" -strip -thumbnail 500x500^ -gravity center -extent 500x500 \
+            -fill '#141019cc' -draw 'circle 440,440 440,398' \
+            -fill "$THEME_ACCENT" -draw 'polygon 427,418 427,462 464,440' "$t"
+        rm -f "$frame"
+    else
+        magick "$f"[0] -strip -thumbnail 500x500^ -gravity center -extent 500x500 "$t"
+    fi
+    echo "$t"
+}
+
+pick_rofi() {
+    local cur font_pt=10 mon_w mon_scale fs_px cols n entry
+    cur="$(cat "$STATE" 2>/dev/null || true)"
+    mon_w="$(hyprctl -j monitors 2>/dev/null | jq -r '.[] | select(.focused) | if (.transform % 2 == 0) then .width else .height end' || true)"
+    mon_scale="$(hyprctl -j monitors 2>/dev/null | jq -r '.[] | select(.focused) | .scale' || true)"
+    mon_w="${mon_w:-1920}"; mon_scale="${mon_scale:-1}"
+    # mesma conta do HyDE: largura útil / largura de um elemento (ícone 14em + padding + espaço = 17.5em; 1em ≈ 2× o tamanho da fonte no rofi)
+    cols="$(awk -v w="$mon_w" -v s="$mon_scale" -v f="$font_pt" 'BEGIN { px = f * 2; c = int((w / s - 8 * px) / (17.5 * px)); print (c < 1 ? 1 : c) }')"
+    mapfile -t files < <(list_all)
+    n="${#files[@]}"; (( n )) || { notify "Nenhum wallpaper encontrado"; exit 0; }
+    (( cols > n )) && cols="$n"
+    local sel=""
+    if [[ -n "$cur" ]]; then sel="$(basename "${cur%.*}")"; is_video "$cur" && sel="󰕧 $sel"; fi
+    entry="$(
+        for f in "${files[@]}"; do
+            name="$(basename "${f%.*}")"
+            is_video "$f" && name="󰕧 $name"
+            printf '%s:::%s\0icon\x1f%s\n' "$name" "$f" "$(thumb_for "$f")"
+        done | rofi -dmenu -i \
+            -display-column-separator ":::" -display-columns 1 \
+            -theme "$ROFI_THEME" \
+            -theme-str "listview { columns: $cols; }" \
+            -select "$sel"
+    )" || exit 0
+    [[ -n "$entry" ]] && apply "${entry#*:::}"
+}
+
+notify() { noctalia msg notification-show "$THEME_NAME" "$*" >/dev/null 2>&1 || true; }
+
+fetch_theme() {
+    local dir="$1" name dst
+    name="$(basename "$dir")"
+    [[ -f "$dir/downloads.txt" ]] || return 0
+    grep -vE '^\s*(#|$)' "$dir/downloads.txt" | while read -r url file; do
+        dst="$WALL_ROOT/$name/$file"
+        [[ -s "$dst" ]] && { echo "  = $name/$file"; continue; }
+        mkdir -p "$(dirname "$dst")"
+        echo "  ↓ $name/$file"
+        curl -fL --progress-bar -A "Mozilla/5.0" -e "${url%/dl/*}/" -o "$dst.part" "$url" && mv "$dst.part" "$dst"
+    done
+}
+
+stop_anim() { pkill -CONT -x mpvpaper 2>/dev/null || true; pkill -x mpvpaper 2>/dev/null || true; }
+
+# quadro estático do vídeo: usado no lockscreen e quando a animação para
+poster_for() {
+    local v="$1" p="${1%.*}.poster.png"
+    [[ -f "$p" ]] && { echo "$p"; return; }
+    p="$STATE_DIR/posters/$(basename "${v%.*}").png"
+    mkdir -p "$STATE_DIR/posters"
+    [[ -f "$p" ]] || ffmpeg -loglevel error -y -i "$v" -frames:v 1 "$p" || true
+    echo "$p"
+}
+
+set_static() {
+    stop_anim
+    noctalia msg wallpaper-set "$1" >/dev/null
+}
+
+set_animated() {
+    local poster; poster="$(poster_for "$1")"
+    [[ -f "$poster" ]] && noctalia msg wallpaper-set "$poster" >/dev/null || true
+    stop_anim
+    if ! command -v mpvpaper >/dev/null; then
+        # fica o quadro estático; a escolha é salva e anima quando o mpvpaper existir
+        echo "mpvpaper não instalado (sudo pacman -S mpvpaper) — usando quadro estático" >&2
+        notify "Instale o mpvpaper para animar: sudo pacman -S mpvpaper"
+        return 0
+    fi
+    # -l bottom: fica acima do wallpaper do Noctalia; -p: pausa quando coberto (economiza GPU)
+    setsid -f mpvpaper -p -l bottom -o "$MPV_OPTS" '*' "$1" >/dev/null 2>&1
+}
+
+apply() {
+    local f; f="$(realpath "$1")"
+    [[ -f "$f" ]] || { echo "arquivo não encontrado: $1" >&2; exit 1; }
+    if is_video "$f"; then set_animated "$f"
+    elif is_image "$f"; then set_static "$f"
+    else echo "formato não suportado: $f" >&2; exit 1; fi
+    echo "$f" > "$STATE"
+    echo "♥ $f"
+}
+
+cmd="${1:-help}"; shift || true
+case "$cmd" in
+    set)     apply "${1:?uso: kwall set <arquivo>}" ;;
+    random)  f="$(list_all "${1:-all}" | shuf -n1)"; [[ -n "$f" ]] && apply "$f" ;;
+    next)
+        cur="$(cat "$STATE" 2>/dev/null || true)"
+        mapfile -t all < <(list_all)
+        for i in "${!all[@]}"; do [[ "${all[$i]}" == "$cur" ]] && { apply "${all[$(( (i + 1) % ${#all[@]} ))]}"; exit; }; done
+        apply "${all[0]}" ;;
+    thumb)   thumb_for "$(realpath "${1:?}")" ;;   # usado pelo ktheme
+    thumbs)  list_all | while read -r f; do thumb_for "$f" >/dev/null && echo "  ✓ $(basename "$f")"; done ;;
+    pick)
+        if command -v rofi >/dev/null; then
+            pick_rofi
+        elif command -v fuzzel >/dev/null; then
+            sel="$(list_all | sed "s|^$HOME|~|" | fuzzel --dmenu --prompt "$THEME_ICON wallpaper: " --width 70)" || exit 0
+            apply "${sel/#\~/$HOME}"
+        else
+            noctalia msg panel-toggle wallpaper
+        fi ;;
+    add)
+        src="${1:?uso: kwall add <arquivo|url>}"
+        if [[ "$src" =~ ^https?:// ]]; then
+            dst="$USER_DIR/$(basename "${src%%\?*}")"
+            curl -fL --progress-bar -o "$dst" "$src"
+        else
+            dst="$USER_DIR/$(basename "$src")"; cp -n "$src" "$dst"
+        fi
+        apply "$dst" ;;
+    stop)
+        cur="$(cat "$STATE" 2>/dev/null || true)"
+        stop_anim
+        if [[ -n "$cur" ]] && is_video "$cur"; then
+            p="$(poster_for "$cur")"; noctalia msg wallpaper-set "$p" >/dev/null; echo "$p" > "$STATE"
+        fi ;;
+    pause)
+        pid="$(pgrep -xo mpvpaper)" || exit 0
+        if [[ "$(ps -o stat= -p "$pid")" == T* ]]; then pkill -CONT -x mpvpaper; else pkill -STOP -x mpvpaper; fi ;;
+    restore)
+        cur="$(cat "$STATE" 2>/dev/null || true)"
+        if [[ -n "$cur" && -f "$cur" ]]; then apply "$cur"; else "$0" default; fi ;;
+    default)
+        def=""
+        for d in "${DIRS[@]}"; do [[ -f "$d/$THEME_WALLPAPER" ]] && { def="$d/$THEME_WALLPAPER"; break; }; done
+        if [[ -z "$def" ]]; then fetch_theme "$THEME_DIR"; [[ -f "$USER_DIR/$THEME_WALLPAPER" ]] && def="$USER_DIR/$THEME_WALLPAPER"; fi
+        [[ -z "$def" ]] && def="$(list_all | head -n1)"
+        [[ -n "$def" ]] && apply "$def" ;;
+    fetch)
+        if [[ "${1:-}" == "all" ]]; then
+            for d in "$DOTFILES"/themes/*/; do [[ -L "${d%/}" ]] || fetch_theme "${d%/}"; done
+        else
+            fetch_theme "$THEME_DIR"
+        fi ;;
+    list)    list_all "${1:-all}" ;;
+    current) cat "$STATE" 2>/dev/null || noctalia msg wallpaper-get ;;
+    *)       sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//' ;;
+esac

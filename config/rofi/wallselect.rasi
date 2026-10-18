@@ -1,0 +1,119 @@
+/**
+ * Seletor de wallpapers/temas (kwall pick, ktheme pick)
+ * Cores, fonte e título vêm do tema ativo: theme.rasi → themes/current/rofi.rasi
+ * Layout baseado no selector.rasi do HyDE (github.com/HyDE-Project/HyDE):
+ * faixa de largura total com uma única linha de miniaturas quadradas.
+ * Colunas e tamanho são ajustados pelo kwall conforme a resolução do monitor.
+ */
+
+configuration {
+    show-icons:                  true;
+    hover-select:                true;
+    me-select-entry:             "";
+    me-accept-entry:             "MousePrimary";
+}
+
+@import "theme.rasi"
+
+window {
+    enabled:                     true;
+    fullscreen:                  false;
+    width:                       100%;
+    transparency:                "real";
+    cursor:                      "default";
+    spacing:                     0em;
+    padding:                     0em;
+    border:                      2px 0px;
+    border-radius:               0em;
+    border-color:                @main-br;
+    background-color:            @main-bg;
+}
+
+mainbox {
+    enabled:                     true;
+    orientation:                 vertical;
+    spacing:                     0em;
+    padding:                     1.2em 0em 0em 0em;
+    children:                    [ "header", "body" ];
+    background-color:            transparent;
+}
+
+header {
+    orientation:                 horizontal;
+    expand:                      false;
+    children:                    [ "hspacer", "textbox-title", "hspacer" ];
+    background-color:            transparent;
+}
+textbox-title {
+    expand:                      false;
+    padding:                     0.4em 1.4em;
+    border-radius:               2em;
+    background-color:            @alt-bg;
+    text-color:                  @main-br;
+}
+
+body {
+    orientation:                 horizontal;
+    children:                    [ "dummy", "frame", "dummy" ];
+    background-color:            transparent;
+}
+frame {
+    children:                    [ "listview" ];
+    background-color:            transparent;
+}
+dummy {
+    width:                       2em;
+    expand:                      false;
+    background-color:            transparent;
+}
+hspacer {
+    expand:                      true;
+    background-color:            transparent;
+}
+
+listview {
+    enabled:                     true;
+    spacing:                     2.5em;
+    padding:                     2.5em 4em 3em 4em;
+    columns:                     5;
+    lines:                       1;
+    dynamic:                     false;
+    fixed-height:                false;
+    fixed-columns:               true;
+    reverse:                     false;
+    scrollbar:                   false;
+    cursor:                      "default";
+    background-color:            transparent;
+    text-color:                  @main-fg;
+}
+
+element {
+    enabled:                     true;
+    orientation:                 vertical;
+    spacing:                     0em;
+    padding:                     0.5em;
+    border-radius:               @radius;
+    cursor:                      pointer;
+    background-color:            @alt-bg;
+    text-color:                  @main-fg;
+}
+element selected.normal {
+    background-color:            @select-bg;
+    text-color:                  @select-fg;
+}
+element-icon {
+    cursor:                      inherit;
+    size:                        14em;
+    border-radius:               @icon-radius;
+    background-color:            transparent;
+    text-color:                  inherit;
+    expand:                      false;
+}
+element-text {
+    padding:                     0.8em 0.5em 0.4em 0.5em;
+    vertical-align:              0.5;
+    horizontal-align:            0.5;
+    cursor:                      inherit;
+    background-color:            transparent;
+    text-color:                  inherit;
+}

@@ -1,0 +1,103 @@
+#!/usr/bin/env bash
+# ktheme — troca de tema (estilo HyDE): cada tema é uma pasta em ~/dotfiles/themes/<Nome>/
+#
+#   ktheme pick            seletor visual (rofi) com prévia de cada tema
+#   ktheme set <Nome>      aplica o tema
+#   ktheme next            próximo tema
+#   ktheme list | current
+#
+# Um tema contém:
+#   theme.conf       nome, descrição, modo e wallpaper padrão
+#   palette.json     paleta do Noctalia (barra, kitty, GTK, Qt, btop…)
+#   hypr.lua         cores/bordas/forma do Hyprland (tabela THEME)
+#   kitty.conf       fonte, transparência, cursor e abas do kitty
+#   fastfetch.jsonc  + logo.png
+#   rofi.rasi        cores e título dos seletores
+#   wallpapers/      wallpapers do repositório; downloads.txt baixa extras em ~/Imagens/Wallpapers/<Nome>
+set -euo pipefail
+
+DOTFILES="${DOTFILES:-$HOME/dotfiles}"
+THEMES="$DOTFILES/themes"
+KWALL="$DOTFILES/scripts/kwall"
+ROFI_THEME="$DOTFILES/config/rofi/wallselect.rasi"
+
+list_themes() {
+    for d in "$THEMES"/*/; do
+        d="${d%/}"
+        [[ -L "$d" || ! -f "$d/theme.conf" ]] && continue
+        basename "$d"
+    done
+}
+
+current() { basename "$(readlink -f "$THEMES/current")"; }
+
+apply_theme() {
+    local name="$1" dir="$THEMES/$1"
+    [[ -f "$dir/theme.conf" ]] || { echo "tema não encontrado: $name (disponíveis: $(list_themes | xargs))" >&2; exit 1; }
+    THEME_MODE="dark"; THEME_ICON=""
+    # shellcheck source=/dev/null
+    source "$dir/theme.conf"
+
+    ln -sfn "$name" "$THEMES/current"
+    ln -sfn "../../../themes/$name/palette.json" "$DOTFILES/config/noctalia/palettes/$name.json"
+
+    if pgrep -x noctalia >/dev/null; then
+        noctalia msg theme-mode-set "$THEME_MODE" >/dev/null 2>&1 || true
+        noctalia msg color-scheme-set custom "$name" >/dev/null 2>&1 || true
+    fi
+    pgrep -x Hyprland >/dev/null && hyprctl reload >/dev/null || true
+    # kitty relê a config (fonte/opacidade/cursor do tema) com SIGUSR1
+    pkill -USR1 -x kitty 2>/dev/null || true
+    # wallpaper: o último usado neste tema, ou o padrão dele
+    "$KWALL" restore >/dev/null 2>&1 || true
+
+    noctalia msg notification-show "Tema: $name" "${THEME_DESC:-}" >/dev/null 2>&1 || true
+    echo "$THEME_ICON $name"
+}
+
+# prévia do tema = miniatura do wallpaper padrão (ou o primeiro que existir)
+preview_for() {
+    local dir="$THEMES/$1" wall="" root
+    THEME_WALLPAPER=""
+    # shellcheck source=/dev/null
+    source "$dir/theme.conf"
+    root="$(xdg-user-dir PICTURES 2>/dev/null || echo "$HOME/Imagens")/Wallpapers/$1"
+    for c in "$dir/wallpapers/$THEME_WALLPAPER" "$root/$THEME_WALLPAPER"; do
+        [[ -n "$THEME_WALLPAPER" && -f "$c" ]] && { wall="$c"; break; }
+    done
+    [[ -z "$wall" ]] && wall="$(find "$dir/wallpapers" -type f ! -name '*.poster.png' | sort | head -n1)"
+    "$KWALL" thumb "$wall"
+}
+
+pick() {
+    local cur sel n
+    cur="$(current)"
+    mapfile -t themes < <(list_themes)
+    n="${#themes[@]}"
+    sel="$(
+        for t in "${themes[@]}"; do
+            THEME_ICON=""
+            # shellcheck source=/dev/null
+            source "$THEMES/$t/theme.conf"
+            printf '%s %s:::%s\0icon\x1f%s\n' "$THEME_ICON" "$t" "$t" "$(preview_for "$t")"
+        done | rofi -dmenu -i \
+            -display-column-separator ":::" -display-columns 1 \
+            -theme "$ROFI_THEME" \
+            -theme-str "window { width: $(( (n < 5 ? n : 5) * 35 / 2 + 12 ))em; border: 2px; } listview { columns: $(( n < 5 ? n : 5 )); } textbox-title { content: \"  󰏘  temas  \"; }" \
+            -select "$cur"
+    )" || exit 0
+    [[ -n "$sel" ]] && apply_theme "${sel#*:::}"
+}
+
+cmd="${1:-pick}"; shift || true
+case "$cmd" in
+    pick)    pick ;;
+    set)     apply_theme "${1:?uso: ktheme set <Nome>}" ;;
+    next)
+        mapfile -t themes < <(list_themes); cur="$(current)"
+        for i in "${!themes[@]}"; do [[ "${themes[$i]}" == "$cur" ]] && { apply_theme "${themes[$(( (i + 1) % ${#themes[@]} ))]}"; exit; }; done
+        apply_theme "${themes[0]}" ;;
+    list)    list_themes ;;
+    current) current ;;
+    *)       sed -n '2,19p' "$0" | sed 's/^# \{0,1\}//' ;;
+esac

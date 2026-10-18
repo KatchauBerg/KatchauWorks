@@ -1,0 +1,15 @@
+# Wallpapers animados de Berserk (fan art, motionbgs.com) — baixados por `kwall fetch`
+# para ~/Imagens/Wallpapers/Guts/. Ficam fora do git por serem arte de terceiros.
+# formato: <url> <arquivo>
+https://motionbgs.com/dl/hd/2015 berserk-crimson-eclipse.mp4
+https://motionbgs.com/dl/hd/2127 berserk-armor-power.mp4
+https://motionbgs.com/dl/hd/8955 berserk-blood-shadow.mp4
+https://motionbgs.com/dl/hd/2751 berserk-eclipse-manga.mp4
+https://motionbgs.com/dl/hd/2755 berserk-blood-moon.mp4
+https://motionbgs.com/dl/hd/2753 berserks-merciless-slaughter.mp4
+https://motionbgs.com/dl/hd/9854 crimson-eclipse-knight-guts.mp4
+https://motionbgs.com/dl/hd/2756 dark-power-of-berserk.mp4
+https://motionbgs.com/dl/hd/8163 guts-black-swordsman-rise.mp4
+https://motionbgs.com/dl/hd/4716 guts-the-black-swordsman.mp4
+https://motionbgs.com/dl/hd/9623 mark-of-berserk.mp4
+https://motionbgs.com/dl/hd/2757 unleashing-berserks-fierce-wrath.mp4

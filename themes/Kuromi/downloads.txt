@@ -1,0 +1,9 @@
+# Wallpapers animados da Kuromi (fan art, motionbgs.com) — baixados por `kwall fetch`
+# para ~/Imagens/Wallpapers/Kuromi/. Ficam fora do git por serem arte de terceiros.
+# formato: <url> <arquivo>
+https://motionbgs.com/dl/hd/1730 sweet-and-spooky-kuromi.mp4
+https://motionbgs.com/dl/hd/3155 kuromis-cloudy-delight.mp4
+https://motionbgs.com/dl/hd/1729 kuromi-skeleton-and-flying-hearts.mp4
+https://motionbgs.com/dl/hd/1724 kuromi-in-space.mp4
+https://motionbgs.com/dl/hd/1728 kuromi-sitting-under-the-rain.mp4
+https://motionbgs.com/dl/hd/1726 kuromi-with-friends.mp4

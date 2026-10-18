@@ -1,0 +1,10 @@
+# gerados em tempo de execução pelo Noctalia / máquina-específicos
+config/kitty/themes/noctalia.conf
+config/fish/fish_variables
+config/fastfetch/themes/
+config/noctalia/*.bak
+__pycache__/
+*.pyc
+
+# tema ativo (link local trocado pelo ktheme)
+themes/current
